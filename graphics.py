@@ -6,7 +6,7 @@ window = t.Screen()
 window.title("Cocomo's Scrabble")
 window.bgcolor("black")
 windowWidth = 1600
-windowHeight = 800
+windowHeight = 900
 cellSize = 40
 window.setup(width=windowWidth, height=windowHeight)
 
@@ -16,7 +16,7 @@ grid_turtle = t.Turtle()
 grid_turtle.speed(0)
 grid_turtle.hideturtle()
 
-grid_text_turtle =t.turtle()
+grid_text_turtle =t.Turtle()
 grid_text_turtle.speed(0)
 grid_text_turtle.hideturtle()
 
@@ -29,6 +29,10 @@ score_turtle.hideturtle()
 collection_turtle = t.Turtle()
 collection_turtle.speed(0)
 collection_turtle.hideturtle()
+
+#to display which goti from selection is selected to be inserted
+border_turtle = t.Turtle()
+border_turtle.hideturtle()
 
 def random_color():
     return (random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1))
