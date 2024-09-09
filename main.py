@@ -1,14 +1,9 @@
 # Add the implementation logic code here
 from data import game_data
-from graphics import defineGrid, drawGrid, t, renderCollection, print_text, windowHeight, window, grid
+from graphics import defineGrid, drawGrid, t, renderCollection, printText, windowHeight, window, grid, drawRectangle
 import random
 import turtle as t
 import time
-
-# class playerData:
-#     def __init__(self):
-#         self.data = []
-#         self.size = 0
 
 clicked = False
 cache = []
@@ -37,8 +32,11 @@ class Game:
         self.border_turtle = t.Turtle()
         self.border_turtle.hideturtle()
 
-        self.selected_letter = None
-        self.selected_letter_index = None
+        self.button_turtle = t.Turtle()
+        self.button_turtle.hideturtle()
+
+        self.selectedLetter = None
+        self.selectedLetterIndex = None
 
         self.clicked=False
 
@@ -46,39 +44,32 @@ class Game:
         if self.timeLeft > 0:
             self.timeLeft -= 1
             self.timer_turtle.clear()
-            print_text(self.timer_turtle, f"Time left: {self.timeLeft} seconds", 0, windowHeight/2-70, align="center")
+            printText(self.timer_turtle, f"Time left: {self.timeLeft} seconds", 0, windowHeight/2-70, align="center")
             window.ontimer(self.displayTime, 1000)
         else:
             self.timer_turtle.clear()
-            print_text(self.timer_turtle, "Time's up!", 0, windowHeight/2-70, align="center")
+            printText(self.timer_turtle, "Time's up!", 0, windowHeight/2-70, align="center")
             self.onTimerEnd()
 
     def gridClick(self, x, y):
         grid_text_turtle = t.Turtle()
         grid_text_turtle.hideturtle()
-        if self.selected_letter:
+        if self.selectedLetter:
             for i, row in enumerate(grid):
                 for j, cell in enumerate(row):
                     if (cell[0] <= x <= cell[0] + cell[2]) and (cell[1] - cell[3] <= y <= cell[1]):
-                        # Place the letter on the grid
-                        print_text(grid_text_turtle, self.selected_letter, cell[0] + self.cellSize/2, cell[1] - (3*self.cellSize)/4, color="black", align="center")
+                        printText(grid_text_turtle, self.selectedLetter, cell[0] + self.cellSize/2, cell[1] - (3*self.cellSize)/4, color="black", align="center")
                         
-                        # Remove the letter from player's collection
-                        self.playerData[self.turn]["collection"][self.selected_letter_index]["goti"] = ""
-                        
-                        # Redraw the player's collection
+                        self.playerData[self.turn]["collection"][self.selectedLetterIndex]["goti"] = ""
                         renderCollection(self.playerData[self.turn], self.turn)
-                        
-                        # Reset selection
-                        self.selected_letter = None
-                        self.selected_letter_index = None
+                        self.selectedLetter = None
+                        self.selectedLetterIndex = None
                         return
 
     def handleGotiClick(self, k):
-        self.selected_letter = self.playerData[self.turn]["collection"][k]["goti"]
-        self.selected_letter_index = k
-        
-        # Highlight the selected letter (optional)
+        self.selectedLetter = self.playerData[self.turn]["collection"][k]["goti"]
+        self.selectedLetterIndex = k
+
         x, y, w, h = self.playerData[self.turn]["collection"][k]["coords"]
         self.border_turtle.clear()
         self.border_turtle.penup()
@@ -92,7 +83,7 @@ class Game:
             self.border_turtle.right(90)
 
     def onClick(self, x, y):
-        if self.selected_letter:
+        if self.selectedLetter:
             self.gridClick(x, y)
         else:
             for k in range(self.csize):
@@ -106,23 +97,24 @@ class Game:
     def onTimerEnd(self):
         window.onscreenclick(None)
         self.turn += 1
-        self.selected_letter = None
-        self.selected_letter_index = None
+        self.selectedLetter = None
+        self.selectedLetterIndex = None
         self.border_turtle.clear()
         self.playerTurn()
 
     def playerTurn(self):
         if self.turn < self.players:
             self.turn_turtle.clear()
-            print_text(self.turn_turtle, f"{self.playerData[self.turn]['name']}'s turn.", 0, windowHeight/2-40, align="center")
-            self.timeLeft = 90  # Reset timer for each turn
+            printText(self.turn_turtle, f"{self.playerData[self.turn]['name']}'s turn.", 0, windowHeight/2-40, align="center")
+            self.timeLeft = 90
             self.displayTime()
             
             window.onscreenclick(self.onClick)
         else:
-            print_text(self.turn_turtle, "Game Over!", 0, windowHeight/2-40, align="center")
+            printText(self.turn_turtle, "Game Over!", 0, windowHeight/2-40, align="center")
 
     def playGame(self):
+        drawRectangle(self.button_turtle, -windowHeight/2+150, 550, 200, 100)
         self.turn = 0
         self.playerTurn()
 

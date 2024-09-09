@@ -37,7 +37,7 @@ border_turtle.hideturtle()
 def random_color():
     return (random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1))
 
-def draw_rectangle(obj, x, y, width, height):
+def drawRectangle(obj, x, y, width, height):
     obj.penup()
     obj.goto(x, y)
     obj.pendown()
@@ -50,7 +50,7 @@ def draw_rectangle(obj, x, y, width, height):
         obj.right(90)
     obj.end_fill()
 
-def print_text(turtle, text, x, y, font=("Arial", 16, "normal"), align="left", color="white"):
+def printText(turtle, text, x, y, font=("Arial", 16, "normal"), align="left", color="white"):
     turtle.penup()
     turtle.goto(x, y)
     turtle.pendown()
@@ -65,13 +65,13 @@ def renderCollection(playerData, playerNum):
     startX= windowWidth/4 - (cellSize+cellSpacing)*collectionSize
     startY = windowHeight/2 -100 - playerNum*(cellSize + verticalOffset)
 
-    print_text(score_turtle, f"{playerData["name"]}'s score: {playerData["score"]}", startX, startY)
+    printText(score_turtle, f"{playerData["name"]}'s score: {playerData["score"]}", startX, startY)
     startY -=40
 
     for i in range(collectionSize):
         playerData["collection"][i]["coords"] = [startX +i*(cellSize+ cellSpacing), startY, cellSize, cellSize]
-        draw_rectangle(collection_turtle, playerData["collection"][i]["coords"][0], playerData["collection"][i]["coords"][1], playerData["collection"][i]["coords"][2], playerData["collection"][i]["coords"][3])
-        print_text(text_turtle, playerData["collection"][i]["goti"], playerData["collection"][i]["coords"][0]+cellSize/2, playerData["collection"][i]["coords"][1] -(3*cellSize)/4, align="center", color="black")
+        drawRectangle(collection_turtle, playerData["collection"][i]["coords"][0], playerData["collection"][i]["coords"][1], playerData["collection"][i]["coords"][2], playerData["collection"][i]["coords"][3])
+        printText(text_turtle, playerData["collection"][i]["goti"], playerData["collection"][i]["coords"][0]+cellSize/2, playerData["collection"][i]["coords"][1] -(3*cellSize)/4, align="center", color="black")
 
 def defineGrid(row:int = 15, cols:int = 15):
     cellSpacing  =5
@@ -90,5 +90,5 @@ def defineGrid(row:int = 15, cols:int = 15):
 def drawGrid():
     for row in grid:
         for col in row:
-            draw_rectangle(grid_turtle, col[0], col[1], col[2], col[3])
+            drawRectangle(grid_turtle, col[0], col[1], col[2], col[3])
     window.update()
