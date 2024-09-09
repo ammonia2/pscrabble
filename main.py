@@ -5,8 +5,6 @@ import random
 import turtle as t
 import time
 
-clicked = False
-cache = []
 playerCount = 2
 collectionSize = 8 # n
 playerData = []
@@ -20,7 +18,9 @@ class Game:
         self.csize = collectionSize
         self.players  =playerCount
         self.turn =0
+        self.totalTurns =0
         self.cache = []
+        self.submit = []
         self.cellSize = 40
 
         self.timer_turtle = t.Turtle()
@@ -38,7 +38,7 @@ class Game:
         self.selectedLetter = None
         self.selectedLetterIndex = None
 
-        self.clicked=False
+        self.gameOver=False
 
     def displayTime(self):
         if self.timeLeft > 0:
@@ -52,16 +52,19 @@ class Game:
             self.onTimerEnd()
 
     def gridClick(self, x, y):
-        grid_text_turtle = t.Turtle()
-        grid_text_turtle.hideturtle()
         if self.selectedLetter:
             for i, row in enumerate(grid):
                 for j, cell in enumerate(row):
-                    if (cell[0] <= x <= cell[0] + cell[2]) and (cell[1] - cell[3] <= y <= cell[1]):
-                        printText(grid_text_turtle, self.selectedLetter, cell[0] + self.cellSize/2, cell[1] - (3*self.cellSize)/4, color="black", align="center")
+                    if (cell[0] <= x <= cell[0] + cell[2]) and (cell[1] - cell[3] <= y <= cell[1]) and (cell[5]=="" or self.selectedLetter=='-'):
+                        cell[5] = self.selectedLetter
+                        printText(cell[4], cell[5], cell[0] + self.cellSize/2, cell[1] - (3*self.cellSize)/4, color="black", align="center")
                         
                         self.playerData[self.turn]["collection"][self.selectedLetterIndex]["goti"] = ""
                         renderCollection(self.playerData[self.turn], self.turn)
+
+                        self.cache.append({"grid": cell, "data": self.playerData[self.turn]["collection"][self.selectedLetterIndex]})
+                        
+                        self.border_turtle.clear()
                         self.selectedLetter = None
                         self.selectedLetterIndex = None
                         return
@@ -70,7 +73,7 @@ class Game:
         self.selectedLetter = self.playerData[self.turn]["collection"][k]["goti"]
         self.selectedLetterIndex = k
 
-        x, y, w, h = self.playerData[self.turn]["collection"][k]["coords"]
+        x, y, w, h, turtle = self.playerData[self.turn]["collection"][k]["coords"]
         self.border_turtle.clear()
         self.border_turtle.penup()
         self.border_turtle.goto(x, y)
@@ -85,6 +88,8 @@ class Game:
     def onClick(self, x, y):
         if self.selectedLetter:
             self.gridClick(x, y)
+        elif self.submit[0] <= x<=self.submit[0]+self.submit[2] and self.submit[1]-self.submit[3]<=y <=self.submit[1]:
+            self.validateInsertions()
         else:
             for k in range(self.csize):
                 goti = self.playerData[self.turn]["collection"][k]["coords"]
@@ -110,13 +115,67 @@ class Game:
             self.displayTime()
             
             window.onscreenclick(self.onClick)
+        elif not self.gameOver:
+            self.turn = 0
+            self.playerTurn()
         else:
             printText(self.turn_turtle, "Game Over!", 0, windowHeight/2-40, align="center")
 
     def playGame(self):
-        drawRectangle(self.button_turtle, -windowHeight/2+150, 550, 200, 100)
-        self.turn = 0
+        self.submit = [550, -windowHeight/2+150, 100, 50]
+        drawRectangle(self.button_turtle, self.submit[0], self.submit[1], self.submit[2], self.submit[3], color="green")
+        printText(self.button_turtle, "Submit",self.submit[0]+50, self.submit[1]-35, align="center")
         self.playerTurn()
+
+    def getWord(self, val):
+        startX, startY = val[6], val[7]
+        foundL, foundR = False, False
+        i, left, right=1, "", ""
+        while not foundL or not foundR:
+            if not foundL and startX-i>=0 and grid[startX-i][startY][5]=="":
+                foundL=True
+            else:
+                left+=grid[startX-i][startY][5]
+            if not foundR and startX+i<len(grid[0]) and grid[startX+i][startY][5]=="":
+                foundR=True
+            else:
+                right+=grid[startX+i][startY][5]
+            i+=1
+        i=1
+        top, bottom="", ""
+        foundL, foundR=False, False
+        while not foundL or not foundR:
+            if not foundL and startY-i>=0 and grid[startX][startY-i][5]=="":
+                foundL=True
+            else:
+                top+=grid[startX][startY-i][5]
+            if not foundR and startY-i<len(grid[0]) and grid[startX][startY+i][5]=="":
+                foundR=True
+            else:
+                bottom+=grid[startX][startY+i][5]
+            i+=1
+
+        if top==bottom==left==right:
+            return False, False
+        word1 = left+grid[startX][startY][5] + right
+        word1 = top+grid[startX][startY][5] + bottom
+        return 
+
+    def returnCache(self):
+        for value in self.cache:
+            temp=value["grid"][5]
+            value["grid"][5] =""
+            value["grid"][4].clear()
+            value["data"]["goti"] = temp
+            renderCollection(self.playerData[self.turn], self.turn, operation="add")
+        self.cache = []
+
+    def validateInsertions(self):
+        for value in self.cache:
+            word1, word2 =self.getWord(value["grid"])
+            if not word1 and not word2: 
+                self.returnCache()
+                break
 
 ###-----
 ##-----
@@ -131,16 +190,16 @@ def setPlayers(playerData, playerCount, collectionSize):
             gotian.remove(random_goti)
             playerData[i]["collection"].append({"goti": random_goti, "coords":[]})
 
-        renderCollection(playerData[i], i)
+        renderCollection(playerData[i], i, initialisation=True)
 
-
+# button_turtle = t.Turtle()
+# button_turtle.hideturtle()
 defineGrid()
 drawGrid()
 
 setPlayers(playerData, playerCount, collectionSize)
 
 game = Game(playerData, playerCount, collectionSize)
-# playGame(playerData, playerCount, collectionSize)
 game.playGame()
 
 t.done()
