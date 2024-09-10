@@ -22,6 +22,7 @@ class Game:
         self.cache = []
         self.submit = []
         self.cellSize = 40
+        self.wordMade=False
 
         self.timer_turtle = t.Turtle()
         self.timer_turtle.hideturtle()
@@ -41,7 +42,10 @@ class Game:
         self.gameOver=False
 
     def displayTime(self):
-        if self.timeLeft > 0:
+        if self.wordMade:
+            self.onTimerEnd()
+            return
+        elif self.timeLeft > 0:
             self.timeLeft -= 1
             self.timer_turtle.clear()
             printText(self.timer_turtle, f"Time left: {self.timeLeft} seconds", 0, windowHeight/2-70, align="center")
@@ -101,11 +105,20 @@ class Game:
 
     def onTimerEnd(self):
         window.onscreenclick(None)
-        self.turn += 1
         self.selectedLetter = None
         self.selectedLetterIndex = None
         self.border_turtle.clear()
+        if not self.wordMade:
+            self.returnCache()
+        else:
+            self.cache=[]
+        self.wordMade=False
+        
+        self.turn += 1
         self.playerTurn()
+        #end display timer
+        #other player's turn doesn't start after submit
+        #inserted letters aren't removed from cache when timer is over
 
     def playerTurn(self):
         if self.turn < self.players:
@@ -149,7 +162,7 @@ class Game:
                 foundL=True
             else:
                 top+=grid[startX][startY-i][5]
-            if not foundR and startY-i<len(grid[0]) and grid[startX][startY+i][5]=="":
+            if not foundR and startY+i<len(grid[0]) and grid[startX][startY+i][5]=="":
                 foundR=True
             else:
                 bottom+=grid[startX][startY+i][5]
@@ -157,9 +170,19 @@ class Game:
 
         if top==bottom==left==right:
             return False, False
+
+        left = left[::-1]
+        top= top[::-1]
         word1 = left+grid[startX][startY][5] + right
-        word1 = top+grid[startX][startY][5] + bottom
-        return 
+        word2 = top+ grid[startX][startY][5] + bottom
+
+        # print(word1, word2)
+        # print(left, grid[startX][startY][5], right)
+
+        found1= word1 in words if len(word1)!=1 else True
+        found2= word2 in words if len(word2)!=1 else True
+
+        return found1, found2
 
     def returnCache(self):
         for value in self.cache:
@@ -171,11 +194,27 @@ class Game:
         self.cache = []
 
     def validateInsertions(self):
+        allValid = True
+        newWords = []
+        
         for value in self.cache:
-            word1, word2 =self.getWord(value["grid"])
-            if not word1 and not word2: 
-                self.returnCache()
+            word1, word2 = self.getWord(value["grid"])
+            if not (word1 and word2):
+                allValid = False
                 break
+            if word1!=True and len(word1)>1 and word1 not in newWords:
+                newWords.append(word1)
+            if word2!=True and len(word2)>1 and word2 not in newWords:
+                newWords.append(word2)
+
+        if allValid:
+            for word in newWords:
+                if word not in self.playerData[self.turn]["words"]:
+                    self.playerData[self.turn]["words"].append(word)
+            self.wordMade=True
+            self.cache=[]
+        else:
+            self.returnCache()
 
 ###-----
 ##-----
