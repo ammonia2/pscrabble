@@ -56,6 +56,7 @@ def renderCollection(playerData, playerNum, operation="delete", initialisation=F
     startX= windowWidth/4 - (cellSize+cellSpacing)*collectionSize
     startY = windowHeight/2 -100 - playerNum*(cellSize + verticalOffset)
 
+    score_turtle.clear()
     printText(score_turtle, f"{playerData["name"]}'s score: {playerData["score"]}", startX, startY)
     startY -=40
     

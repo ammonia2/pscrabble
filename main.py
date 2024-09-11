@@ -9,7 +9,7 @@ playerCount = 2
 collectionSize = 8 # n
 playerData = []
 gotian = game_data["gotian"][:] #list with chars (copy made so original gotian isn't affected)
-score_dict = game_data["alphabet_score"] #score against alphabet in nested dict
+scoreDict = game_data["alphabet_score"] #score against alphabet in nested dict
 words = game_data["words"] #list with possible words
 
 class Game:
@@ -102,6 +102,15 @@ class Game:
                 if (gotiX <= x <= gotiX+gotiW) and (gotiY-gotiH <= y <= gotiY) and self.playerData[self.turn]["collection"][k]["goti"]!="":
                     self.handleGotiClick(k)
                     break
+
+    def updateScore(self):
+        for value in self.cache:
+            score=0
+            for x in scoreDict:
+                if x["alphabet"] ==value["grid"][5]:
+                    score=x["score"]
+                    break
+            self.playerData[self.turn]["score"]+= score
 
     def onTimerEnd(self):
         window.onscreenclick(None)
@@ -238,17 +247,12 @@ class Game:
         newWords = []
 
         isFirstMove = self.gridEmpty()
-        # if isFirstMove:
-        #     print("First Move")
-        # else:
-        #     print("not first move")
         
         for value in self.cache:
             x, y = value["grid"][6], value["grid"][7]
             if not isFirstMove:
                 if not self.isAdjacentToExistingLetter(x, y):
                     allValid = False
-                    # print("NOT VALID")
                     break
 
             word1, word2 = self.getWord(value["grid"])
@@ -265,6 +269,7 @@ class Game:
                 if word not in self.playerData[self.turn]["words"]:
                     self.playerData[self.turn]["words"].append(word)
             self.wordMade=True
+            self.updateScore()
             self.cache=[]
             self.restoreCollection()
         else:
