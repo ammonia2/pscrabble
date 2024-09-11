@@ -99,7 +99,7 @@ class Game:
                 goti = self.playerData[self.turn]["collection"][k]["coords"]
                 gotiX, gotiY, gotiW, gotiH = goti[0], goti[1], goti[2], goti[3]
                 
-                if (gotiX <= x <= gotiX+gotiW) and (gotiY-gotiH <= y <= gotiY):
+                if (gotiX <= x <= gotiX+gotiW) and (gotiY-gotiH <= y <= gotiY) and self.playerData[self.turn]["collection"][k]["goti"]!="":
                     self.handleGotiClick(k)
                     break
 
@@ -193,11 +193,64 @@ class Game:
             renderCollection(self.playerData[self.turn], self.turn, operation="add")
         self.cache = []
 
+    def restoreCollection(self):
+        for letter in self.playerData[self.turn]["collection"]:
+            if letter["goti"]=="":
+                randomGoti=random.choice(gotian)
+                gotian.remove(randomGoti)
+                letter["goti"] = randomGoti
+        renderCollection(playerData[self.turn], self.turn)
+
+    def isAdjacentToExistingLetter(self, x, y):
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        for dx, dy in directions:
+            adjacentX = x + dx
+            adjacentY = y + dy
+            
+            if 0 <= adjacentX < len(grid[0]) and 0 <= adjacentY<len(grid[0]):
+                if grid[adjacentX][adjacentY][5] != "":
+                    isFromCurrentMove = False
+                    for value in self.cache:
+                        if value["grid"][6] == adjacentX and value["grid"][7] == adjacentY:
+                            isFromCurrentMove =True
+                            break
+                    
+                    if not isFromCurrentMove:
+                        return True
+        
+        return False
+
+    def gridEmpty(self):
+        for row in grid:
+            for cell in row:
+                inCache = False
+                for value in self.cache:
+                    if cell ==value["grid"]:
+                        inCache=True
+                
+                if cell[5] != "" and not inCache:
+                    return False
+        return True
+
     def validateInsertions(self):
         allValid = True
         newWords = []
+
+        isFirstMove = self.gridEmpty()
+        # if isFirstMove:
+        #     print("First Move")
+        # else:
+        #     print("not first move")
         
         for value in self.cache:
+            x, y = value["grid"][6], value["grid"][7]
+            if not isFirstMove:
+                if not self.isAdjacentToExistingLetter(x, y):
+                    allValid = False
+                    # print("NOT VALID")
+                    break
+
             word1, word2 = self.getWord(value["grid"])
             if not (word1 and word2):
                 allValid = False
@@ -213,6 +266,7 @@ class Game:
                     self.playerData[self.turn]["words"].append(word)
             self.wordMade=True
             self.cache=[]
+            self.restoreCollection()
         else:
             self.returnCache()
 
@@ -225,9 +279,9 @@ def setPlayers(playerData, playerCount, collectionSize):
         playerData.append({"name": name, "score": 0, "collection": [], "words": []})
 
         for j in range(collectionSize):
-            random_goti = random.choice(gotian)
-            gotian.remove(random_goti)
-            playerData[i]["collection"].append({"goti": random_goti, "coords":[]})
+            randomGoti = random.choice(gotian)
+            gotian.remove(randomGoti)
+            playerData[i]["collection"].append({"goti": randomGoti, "coords":[]})
 
         renderCollection(playerData[i], i, initialisation=True)
 
