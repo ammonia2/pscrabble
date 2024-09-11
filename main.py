@@ -103,14 +103,18 @@ class Game:
                     self.handleGotiClick(k)
                     break
 
-    def updateScore(self):
-        for value in self.cache:
-            score=0
-            for x in scoreDict:
-                if x["alphabet"] ==value["grid"][5]:
-                    score=x["score"]
-                    break
-            self.playerData[self.turn]["score"]+= score
+    def getScore(self, word):
+        score=0
+        for letter in word:
+            inCache=False
+            for value in self.cache:
+                if value["grid"][5]==letter:
+                    for x in scoreDict:
+                        if x["alphabet"] ==value["grid"][5]:
+                            score+=x["score"]
+                            break
+
+        return score
 
     def onTimerEnd(self):
         window.onscreenclick(None)
@@ -185,11 +189,11 @@ class Game:
         word1 = left+grid[startX][startY][5] + right
         word2 = top+ grid[startX][startY][5] + bottom
 
-        # print(word1, word2)
-        # print(left, grid[startX][startY][5], right)
+        found1= word1 in words if len(word1)!=1 else False
+        found2= word2 in words if len(word2)!=1 else False
 
-        found1= word1 in words if len(word1)!=1 else True
-        found2= word2 in words if len(word2)!=1 else True
+        found1 =word1 if found1 else False
+        found1 =word2 if found2 else False
 
         return found1, found2
 
@@ -265,11 +269,14 @@ class Game:
                 newWords.append(word2)
 
         if allValid:
+            # print(newWords)
             for word in newWords:
                 if word not in self.playerData[self.turn]["words"]:
-                    self.playerData[self.turn]["words"].append(word)
+                    score=self.getScore(word)
+                    self.playerData[self.turn]["words"].append([word, score])
+                    self.playerData[self.turn]["score"]+= score
+
             self.wordMade=True
-            self.updateScore()
             self.cache=[]
             self.restoreCollection()
         else:
@@ -281,7 +288,9 @@ class Game:
 def setPlayers(playerData, playerCount, collectionSize):
     for i in range(playerCount):
         name = t.textinput("Player Name", f"Enter name for player {i + 1}:")
-        playerData.append({"name": name, "score": 0, "collection": [], "words": []})
+        score_turtle = t.Turtle()
+        score_turtle.hideturtle()
+        playerData.append({"name": name, "score": 0, "collection": [], "words": [], "turtle": score_turtle})
 
         for j in range(collectionSize):
             randomGoti = random.choice(gotian)
