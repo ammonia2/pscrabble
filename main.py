@@ -21,6 +21,9 @@ class Game:
         self.totalTurns =0
         self.cache = []
         self.submit = []
+        self.hint=[]
+        self.skip=[]
+        self.skipped=False
         self.cellSize = 40
         self.wordMade=False
 
@@ -43,6 +46,9 @@ class Game:
 
     def displayTime(self):
         if self.wordMade:
+            self.onTimerEnd()
+            return
+        elif self.skipped==True:
             self.onTimerEnd()
             return
         elif self.timeLeft > 0:
@@ -89,11 +95,25 @@ class Game:
             self.border_turtle.forward(h)
             self.border_turtle.right(90)
 
+    def getHint(self):
+        print("Hint requested")
+        i=1
+        for row in grid:
+            for cell in row:
+                res =self.searchLaterally(cell)
+                if res==-1:
+                    print("not found", i)
+                i+=1
+
     def onClick(self, x, y):
         if self.selectedLetter:
             self.gridClick(x, y)
         elif self.submit[0] <= x<=self.submit[0]+self.submit[2] and self.submit[1]-self.submit[3]<=y <=self.submit[1]:
             self.validateInsertions()
+        elif self.hint[0] <= x<= self.hint[0]+self.hint[2] and self.hint[1]-self.hint[3] <= y <=self.hint[1]:
+            self.getHint()
+        elif self.skip[0] <= x<= self.skip[0]+self.skip[2] and self.skip[1]-self.skip[3] <= y <=self.skip[1]:
+            self.skipped= True
         else:
             for k in range(self.csize):
                 goti = self.playerData[self.turn]["collection"][k]["coords"]
@@ -121,6 +141,7 @@ class Game:
         self.selectedLetter = None
         self.selectedLetterIndex = None
         self.border_turtle.clear()
+        self.skipped=False
         if not self.wordMade:
             self.returnCache()
         else:
@@ -147,53 +168,221 @@ class Game:
         else:
             printText(self.turn_turtle, "Game Over!", 0, windowHeight/2-40, align="center")
 
+    def combinations(self, letters, spaces):
+        if spaces == 0:
+            return [""]
+        
+        result = []
+        for i, letterDict in enumerate(letters):
+            remainingLetters = letters[:i] + letters[i+1:]
+            letter= letterDict["goti"]
+            for combo in self.combinations(remainingLetters, spaces - 1):
+                result.append(letter + combo)
+        
+        return result
+
+    def findWordCombinations(self, left, spaces, right, x, y, dirn="vertical"):
+        letters = self.playerData[self.turn]["collection"]
+
+        combs= self.combinations(letters, spaces)
+        for w in combs:
+            if left+w+right not in words:
+                combs.remove(w)
+            else:
+                w=[left, w, right, x, y, dirn, 0]
+
+        return combs
+
+    def searchLaterally(self, cell):
+        if cell[5]!="": return -1
+
+        print("searching", cell[5], cell[6], cell[7])
+
+        startX,startY =cell[6], cell[7]
+        i=1
+        left, right ="", ""
+        if startX-i>=0 and  grid[startX-i][startY][5]!="":
+            while startX-i>=0 and grid[startX-i][startY][5]!="":
+                left+=grid[startX-i][startY][5]
+                i-=1
+            
+            left=left[::-1]
+
+        i=1
+        rightSpaces=0
+        inPlace= False
+        if left: inPlace=True
+        while startX+i<len(grid[0]) :
+            if grid[startX+i][startY][5]=="":
+                if not inPlace and self.isAdjacentToExistingLetter(startX+i, startY):
+                    inPlace=True
+                rightSpaces+=1
+                i+=1
+            else : break
+
+        while startX+i<len(grid[0]) :
+            if grid[startX+i][startY][5]!="":
+                if not inPlace and self.isAdjacentToExistingLetter(startX+i, startY):
+                    inPlace=True
+                right+=grid[startX+i][startY][5]
+                i+=1
+            else: break
+
+        if not inPlace:
+            return -1
+
+        print("finding combs")
+
+        combs= self.findWordCombinations(left, rightSpaces, right, startX, startY, dirn="lateral")
+        combs = self.validateGuess(combs)
+
+        print(combs)
+        return combs
+
+    def validateGuess(self, combs):
+        for w in combs:
+            invalid=False
+            dirn= w[5]
+            word= w[0]+w[1]+w[2]
+            if dirn=="lateral":
+                startX= w[3]- len(w[0])
+                startY= w[4]
+                for letter in word:
+                    i=1
+                    top, bottom="", ""
+                    foundL, foundR=False, False
+                    while not foundL or not foundR:
+                        if not foundL and startY-i>=0 and grid[startX][startY-i][5]=="":
+                            foundL=True
+                        else:
+                            top+=grid[startX][startY-i][5]
+                        if not foundR and startY+i<len(grid[0]) and grid[startX][startY+i][5]=="":
+                            foundR=True
+                        else:
+                            bottom+=grid[startX][startY+i][5]
+                        i+=1
+
+                    top= top[::-1]
+                    vword = top +letter +bottom
+                    found= vword in words if len(vword)!=1 else False
+                    found =vword if found else True if len(vword)==1 else False
+
+                    if not found:
+                        invalid=True
+                        break
+            elif dirn=="vertical":
+                startX=w[3]
+                startY= w[4]- len(w[0])
+                for letter in word:
+                    foundL, foundR = False, False
+                    i, left, right=1, "", ""
+                    while not foundL or not foundR:
+                        if not foundL and startX-i>=0 and grid[startX-i][startY][5]=="":
+                            foundL=True
+                        else:
+                            left+=grid[startX-i][startY][5]
+                        if not foundR and startX+i<len(grid[0]) and grid[startX+i][startY][5]=="":
+                            foundR=True
+                        else:
+                            right+=grid[startX+i][startY][5]
+                        i+=1
+
+                    left = left[::-1]
+                    vword = left +letter +right
+                    found= vword in words if len(vword)!=1 else False
+                    found =vword if found else True if len(vword)==1 else False
+
+                    if not found:
+                        invalid=True
+
+            if invalid:
+                combs.remove(w)
+            else:
+                score=0
+                for letter in w[1]:
+                    for x in scoreDict:
+                        if x["alphabet"] ==letter:
+                            score+=x["score"]
+                            break
+                print(w[1])
+                w[6]=score
+
+        return combs
+
     def playGame(self):
         self.submit = [550, -windowHeight/2+150, 100, 50]
         drawRectangle(self.button_turtle, self.submit[0], self.submit[1], self.submit[2], self.submit[3], color="green")
         printText(self.button_turtle, "Submit",self.submit[0]+50, self.submit[1]-35, align="center")
+        
+        self.hint = [550, -windowHeight/2+210, 100, 50]
+        drawRectangle(self.button_turtle, self.hint[0], self.hint[1], self.hint[2], self.hint[3], color="blue")
+        printText(self.button_turtle, "Hint", self.hint[0]+50, self.hint[1]-35, align="center")
+
+        self.skip = [550, -windowHeight/2+270, 100, 50]
+        drawRectangle(self.button_turtle, self.skip[0], self.skip[1], self.skip[2], self.skip[3], color="DarkGrey")
+        printText(self.button_turtle, "Skip", self.skip[0]+50, self.skip[1]-35, align="center")
+
         self.playerTurn()
 
     def getWord(self, val):
         startX, startY = val[6], val[7]
         foundL, foundR = False, False
-        i, left, right=1, "", ""
+        i, left, right = 1, "", ""
+        
         while not foundL or not foundR:
-            if not foundL and startX-i>=0 and grid[startX-i][startY][5]=="":
-                foundL=True
+            if not foundL and startX-i >= 0:
+                if grid[startX-i][startY][5] == "":
+                    foundL = True
+                else:
+                    left += grid[startX-i][startY][5]
             else:
-                left+=grid[startX-i][startY][5]
-            if not foundR and startX+i<len(grid[0]) and grid[startX+i][startY][5]=="":
-                foundR=True
-            else:
-                right+=grid[startX+i][startY][5]
-            i+=1
-        i=1
-        top, bottom="", ""
-        foundL, foundR=False, False
-        while not foundL or not foundR:
-            if not foundL and startY-i>=0 and grid[startX][startY-i][5]=="":
-                foundL=True
-            else:
-                top+=grid[startX][startY-i][5]
-            if not foundR and startY+i<len(grid[0]) and grid[startX][startY+i][5]=="":
-                foundR=True
-            else:
-                bottom+=grid[startX][startY+i][5]
-            i+=1
+                foundL = True
 
-        if top==bottom==left==right:
+            if not foundR and startX+i < len(grid):
+                if grid[startX+i][startY][5] == "":
+                    foundR = True
+                else:
+                    right += grid[startX+i][startY][5]
+            else:
+                foundR = True
+
+            i +=1
+
+        i= 1
+        top, bottom = "", ""
+        foundL, foundR = False, False
+
+        while not foundL or not foundR:
+            if not foundL and startY-i >= 0:
+                if grid[startX][startY-i][5] == "":
+                    foundL = True
+                else:
+                    top += grid[startX][startY-i][5]
+            else:
+                foundL = True
+
+            if not foundR and startY+i < len(grid[0]):
+                if grid[startX][startY+i][5] == "":
+                    foundR = True
+                else:
+                    bottom += grid[startX][startY+i][5]
+            else:
+                foundR = True
+
+            i += 1
+
+        if top == bottom == left == right == "":
             return False, False
 
         left = left[::-1]
-        top= top[::-1]
-        word1 = left+grid[startX][startY][5] + right
-        word2 = top+ grid[startX][startY][5] + bottom
+        top = top[::-1]
+        word1 = left + grid[startX][startY][5] + right
+        word2 = top + grid[startX][startY][5] + bottom
 
-        found1= word1 in words if len(word1)!=1 else False
-        found2= word2 in words if len(word2)!=1 else False
-
-        found1 =word1 if found1 else False
-        found1 =word2 if found2 else False
+        found1 = word1 in words if len(word1) != 1 else False
+        found2 = word2 in words if len(word2) != 1 else False
+        found1 = word1 if found1 else True if len(word1)==1 else False
+        found2 = word2 if found2 else True if len(word2)==1 else False
 
         return found1, found2
 
@@ -269,7 +458,6 @@ class Game:
                 newWords.append(word2)
 
         if allValid:
-            # print(newWords)
             for word in newWords:
                 if word not in self.playerData[self.turn]["words"]:
                     score=self.getScore(word)
@@ -290,7 +478,7 @@ def setPlayers(playerData, playerCount, collectionSize):
         name = t.textinput("Player Name", f"Enter name for player {i + 1}:")
         score_turtle = t.Turtle()
         score_turtle.hideturtle()
-        playerData.append({"name": name, "score": 0, "collection": [], "words": [], "turtle": score_turtle})
+        playerData.append({"name": name, "score": 0, "collection": [], "words": [], "turtle": score_turtle, "hints": 2})
 
         for j in range(collectionSize):
             randomGoti = random.choice(gotian)
