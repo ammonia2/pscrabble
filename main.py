@@ -120,6 +120,11 @@ class Game:
                 gotiX, gotiY, gotiW, gotiH = goti[0], goti[1], goti[2], goti[3]
                 
                 if (gotiX <= x <= gotiX+gotiW) and (gotiY-gotiH <= y <= gotiY) and self.playerData[self.turn]["collection"][k]["goti"]!="":
+                    if self.playerData[self.turn]["collection"][k]["goti"]=='-':
+                        newGoti=t.textinput("new Goti" ,"Enter goti to replace: ")
+                        self.playerData[self.turn]["collection"][k]["goti"]= newGoti
+                        self.playerData[self.turn]["collection"][k]['minus'] = True
+                        renderCollection(self.playerData[self.turn], self.turn)
                     self.handleGotiClick(k)
                     break
 
@@ -184,14 +189,13 @@ class Game:
     def findWordCombinations(self, left, spaces, right, x, y, dirn="vertical"):
         letters = self.playerData[self.turn]["collection"]
 
-        combs= self.combinations(letters, spaces)
+        combs = self.combinations(letters, spaces)
+        validCombs = []
         for w in combs:
-            if left+w+right not in words:
-                combs.remove(w)
-            else:
-                w=[left, w, right, x, y, dirn, 0]
+            if left+w+right in words:
+                validCombs.append([left, w, right, x, y, dirn, 0])  # Changed this line
 
-        return combs
+        return validCombs
 
     def searchLaterally(self, cell):
         if cell[5]!="": return -1
@@ -227,6 +231,7 @@ class Game:
                 right+=grid[startX+i][startY][5]
                 i+=1
             else: break
+        print(right)
 
         if not inPlace:
             return -1
@@ -234,12 +239,15 @@ class Game:
         print("finding combs")
 
         combs= self.findWordCombinations(left, rightSpaces, right, startX, startY, dirn="lateral")
-        combs = self.validateGuess(combs)
+        if not combs:
+            return -1
+        validCombs = self.validateGuess(combs)
 
         print(combs)
-        return combs
+        return validCombs if validCombs else -1
 
     def validateGuess(self, combs):
+        validCombs=[]
         for w in combs:
             invalid=False
             dirn= w[5]
@@ -295,17 +303,16 @@ class Game:
                     if not found:
                         invalid=True
 
-            if invalid:
-                combs.remove(w)
-            else:
-                score=0
+            if not invalid:
+                score = 0
                 for letter in w[1]:
                     for x in scoreDict:
-                        if x["alphabet"] ==letter:
-                            score+=x["score"]
+                        if x["alphabet"] == letter:
+                            score += x["score"]
                             break
                 print(w[1])
-                w[6]=score
+                w[6] = score
+                validCombs.append(w)
 
         return combs
 
@@ -326,63 +333,39 @@ class Game:
 
     def getWord(self, val):
         startX, startY = val[6], val[7]
-        foundL, foundR = False, False
         i, left, right = 1, "", ""
         
-        while not foundL or not foundR:
-            if not foundL and startX-i >= 0:
-                if grid[startX-i][startY][5] == "":
-                    foundL = True
-                else:
-                    left += grid[startX-i][startY][5]
-            else:
-                foundL = True
-
-            if not foundR and startX+i < len(grid):
-                if grid[startX+i][startY][5] == "":
-                    foundR = True
-                else:
-                    right += grid[startX+i][startY][5]
-            else:
-                foundR = True
-
+        while startX - i >= 0 and grid[startX - i][startY][5] != "":
+            left += grid[startX - i][startY][5]
             i +=1
+        left = left[::-1]
+
+        i = 1
+        while startX + i < len(grid) and grid[startX + i][startY][5] != "":
+            right += grid[startX + i][startY][5]
+            i+= 1
+
+        word1 = left + grid[startX][startY][5] + right
+
+        i, top, bottom = 1, "", ""
+
+        while startY - i >= 0 and grid[startX][startY - i][5] != "":
+            top += grid[startX][startY - i][5]
+            i+= 1
+        top = top[::-1]
 
         i= 1
-        top, bottom = "", ""
-        foundL, foundR = False, False
+        while startY + i < len(grid[0]) and grid[startX][startY + i][5] != "":
+            bottom += grid[startX][startY + i][5]
+            i +=1
 
-        while not foundL or not foundR:
-            if not foundL and startY-i >= 0:
-                if grid[startX][startY-i][5] == "":
-                    foundL = True
-                else:
-                    top += grid[startX][startY-i][5]
-            else:
-                foundL = True
-
-            if not foundR and startY+i < len(grid[0]):
-                if grid[startX][startY+i][5] == "":
-                    foundR = True
-                else:
-                    bottom += grid[startX][startY+i][5]
-            else:
-                foundR = True
-
-            i += 1
-
-        if top == bottom == left == right == "":
-            return False, False
-
-        left = left[::-1]
-        top = top[::-1]
-        word1 = left + grid[startX][startY][5] + right
         word2 = top + grid[startX][startY][5] + bottom
 
-        found1 = word1 in words if len(word1) != 1 else False
-        found2 = word2 in words if len(word2) != 1 else False
-        found1 = word1 if found1 else True if len(word1)==1 else False
-        found2 = word2 if found2 else True if len(word2)==1 else False
+        found1 = word1 in words if len(word1) > 1 else False
+        found2 = word2 in words if len(word2) > 1 else False
+
+        found1 = word1 if found1 else True if len(word1) == 1 else False
+        found2 = word2 if found2 else True if len(word2) == 1 else False
 
         return found1, found2
 
@@ -391,7 +374,7 @@ class Game:
             temp=value["grid"][5]
             value["grid"][5] =""
             value["grid"][4].clear()
-            value["data"]["goti"] = temp
+            value["data"]["goti"] = temp if value["data"]["minus"]==False else '-'
             renderCollection(self.playerData[self.turn], self.turn, operation="add")
         self.cache = []
 
@@ -399,8 +382,10 @@ class Game:
         for letter in self.playerData[self.turn]["collection"]:
             if letter["goti"]=="":
                 randomGoti=random.choice(gotian)
+                minus = True if randomGoti=='-' else False
                 gotian.remove(randomGoti)
                 letter["goti"] = randomGoti
+                letter["minus"] = minus
         renderCollection(playerData[self.turn], self.turn)
 
     def isAdjacentToExistingLetter(self, x, y):
@@ -437,18 +422,21 @@ class Game:
 
     def validateInsertions(self):
         allValid = True
+        inPlace= False
         newWords = []
+        print("validating..")
 
         isFirstMove = self.gridEmpty()
+        if isFirstMove: inPlace=True
         
         for value in self.cache:
             x, y = value["grid"][6], value["grid"][7]
             if not isFirstMove:
-                if not self.isAdjacentToExistingLetter(x, y):
-                    allValid = False
-                    break
+                if not inPlace and self.isAdjacentToExistingLetter(x, y):
+                    inPlace = True
 
             word1, word2 = self.getWord(value["grid"])
+            print(word1, word2)
             if not (word1 and word2):
                 allValid = False
                 break
@@ -457,12 +445,14 @@ class Game:
             if word2!=True and len(word2)>1 and word2 not in newWords:
                 newWords.append(word2)
 
-        if allValid:
+        if allValid and inPlace:
             for word in newWords:
-                if word not in self.playerData[self.turn]["words"]:
-                    score=self.getScore(word)
-                    self.playerData[self.turn]["words"].append([word, score])
-                    self.playerData[self.turn]["score"]+= score
+                # if word not in self.playerData[self.turn]["words"]:
+                score=self.getScore(word)
+                print(score, self.playerData[self.turn]["score"])
+                self.playerData[self.turn]["words"].append([word, score])
+                self.playerData[self.turn]["score"]+= score
+                print(self.playerData[self.turn]["score"])
 
             self.wordMade=True
             self.cache=[]
@@ -483,7 +473,8 @@ def setPlayers(playerData, playerCount, collectionSize):
         for j in range(collectionSize):
             randomGoti = random.choice(gotian)
             gotian.remove(randomGoti)
-            playerData[i]["collection"].append({"goti": randomGoti, "coords":[]})
+            minus = True if randomGoti=='-' else False
+            playerData[i]["collection"].append({"goti": randomGoti, "coords":[], "minus": minus})
 
         renderCollection(playerData[i], i, initialisation=True)
 
