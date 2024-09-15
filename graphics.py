@@ -54,11 +54,11 @@ def renderCollection(playerData, playerNum, operation="delete", initialisation=F
     verticalOffset = 100
 
     startX= windowWidth/4 - (cellSize+cellSpacing)*collectionSize
-    startY = windowHeight/2 -100 - playerNum*(cellSize + verticalOffset)
+    startY = windowHeight/2 -140 - playerNum*(cellSize + verticalOffset)
 
     score_turtle= playerData["turtle"]
     score_turtle.clear()
-    printText(score_turtle, f"{playerData["name"]}'s score: {playerData["score"]}", startX, startY)
+    printText(score_turtle, f"{playerData["name"]}'s score: {playerData["score"]}. Hints: {playerData["hints"]}", startX, startY)
     startY -=40
     
     if initialisation==True: #change 5 to total players *5
